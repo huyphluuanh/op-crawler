@@ -134,8 +134,12 @@ async function main() {
 // ---------------- GitHub ----------------
 const REPO = 'op-crawler';
 
+const GIT = existsSync('C:\\Program Files\\Git\\cmd\\git.exe') ? 'C:\\Program Files\\Git\\cmd\\git.exe' : 'git';
+
 function git(args: string[], input?: string) {
-  return spawnSync('git', args, { input, encoding: 'utf8', stdio: input === undefined ? 'inherit' : 'pipe' });
+  const r = spawnSync(GIT, args, { input, encoding: 'utf8', stdio: input === undefined ? 'inherit' : 'pipe' });
+  if (r.error) console.warn(`  git ${args[0]}: ${r.error.message}`);
+  return r;
 }
 
 async function github(): Promise<string> {
@@ -185,7 +189,10 @@ async function github(): Promise<string> {
   else if (pages.status === 409) await gh('PUT', `/repos/${owner}/${REPO}/pages`, { build_type: 'workflow' });
   else throw new Error(`không bật được GitHub Pages (${pages.status}): ${pages.data?.message}`);
 
-  if (git(['push', '-u', 'origin', 'main']).status !== 0) throw new Error('git push thất bại');
+  // Thử 2 lần (lần đầu GCM có thể đang mở cửa sổ đăng nhập)
+  if (git(['push', '-u', 'origin', 'main']).status !== 0 && git(['push', '-u', 'origin', 'main']).status !== 0) {
+    throw new Error('git push thất bại (xem dòng lỗi phía trên)');
+  }
   if (pagesNew) {
     // Pages vừa bật sau khi code đã có sẵn → chạy lại workflow đăng web cho chắc
     await gh('POST', `/repos/${owner}/${REPO}/actions/workflows/pages.yml/dispatches`, { ref: 'main' });
