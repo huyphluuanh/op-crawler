@@ -1,7 +1,25 @@
 // Định nghĩa lệnh Discord. Dùng chung cho script đăng ký lệnh và Edge Function.
-// Loại option: 3 = chữ, 4 = số nguyên. Loại lệnh: 1 = slash, 3 = chuột phải vào tin nhắn.
+// Loại option: 3 = chữ, 4 = số nguyên, 5 = có/không. Loại lệnh: 1 = slash, 3 = chuột phải vào tin nhắn.
 
 export const MESSAGE_COMMAND = 'Crawl link này';
+
+/** Thứ tự bình luận = giá trị viewOption của Apify facebook-comments-scraper. */
+export const SORTS = {
+  RECENT_ACTIVITY: 'Mới nhất',
+  RANKED_THREADED: 'Phù hợp nhất',
+  RANKED_UNFILTERED: 'Tất cả (thứ tự Facebook)',
+} as const;
+export type Sort = keyof typeof SORTS;
+export const DEFAULT_SORT: Sort = 'RECENT_ACTIVITY';
+export const isSort = (v: unknown): v is Sort => typeof v === 'string' && v in SORTS;
+
+const COMMENT_OPTIONS = [
+  {
+    type: 3, name: 'sap_xep', description: 'Thứ tự lấy bình luận (mặc định: Mới nhất)',
+    choices: Object.entries(SORTS).map(([value, name]) => ({ name, value })),
+  },
+  { type: 5, name: 'tra_loi', description: 'Lấy cả bình luận trả lời bên dưới (mặc định: Không, tốn thêm Apify)' },
+];
 
 export const COMMANDS = [
   {
@@ -13,6 +31,7 @@ export const COMMANDS = [
       { type: 4, name: 'so_bai', description: 'Số bài mới nhất lấy từ mỗi fanpage (mặc định 20)', min_value: 1, max_value: 200 },
       { type: 4, name: 'binh_luan', description: 'Số bình luận lấy mỗi bài (mặc định 30, 0 = không lấy)', min_value: 0, max_value: 500 },
       { type: 4, name: 'so_ngay', description: 'Chỉ lấy bài đăng trong N ngày gần nhất (vd 7, 30)', min_value: 1, max_value: 3650 },
+      ...COMMENT_OPTIONS,
     ],
   },
   {
@@ -23,6 +42,7 @@ export const COMMANDS = [
       { type: 3, name: 'link', description: 'Link bài viết (dán nhiều link cách nhau dấu cách)', required: true },
       { type: 4, name: 'so_luong', description: 'Số bình luận tối đa mỗi bài (mặc định 100)', min_value: 1, max_value: 5000 },
       { type: 4, name: 'so_ngay', description: 'Chỉ lấy bình luận viết trong N ngày gần nhất (vd 7, 30)', min_value: 1, max_value: 3650 },
+      ...COMMENT_OPTIONS,
     ],
   },
   {

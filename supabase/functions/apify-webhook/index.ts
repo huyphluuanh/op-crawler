@@ -3,6 +3,7 @@
 //   stage=comments → lưu bình luận + dòng máy, báo kết quả lên Discord
 // Apify có thể gọi lại (retry) → mỗi bước "giành" job bằng cách đổi trạng thái có điều kiện.
 import { COMMENTS_ACTOR, datasetItems, startActor, webhookUrl } from '../_shared/apify.ts';
+import { DEFAULT_SORT, isSort } from '../_shared/commands.ts';
 import { background, db, type Job, upsertChunks } from '../_shared/db.ts';
 import { COLOR, notifyJob } from '../_shared/discord.ts';
 import {
@@ -67,8 +68,8 @@ async function onPosts(job: Job, run: Run) {
     const runId = await startActor(COMMENTS_ACTOR, {
       startUrls: withComments.map((p) => ({ url: p.url })),
       resultsLimit: job.comments_per_post,
-      includeNestedComments: false,
-      viewOption: 'RANKED_UNFILTERED',
+      includeNestedComments: job.include_replies ?? false,
+      viewOption: isSort(job.comments_sort) ? job.comments_sort : DEFAULT_SORT,
     }, webhookUrl(job.id, 'comments'));
     await db.from('jobs').update({
       status: 'crawling_comments', apify_comments_run: runId, post_count: posts.length,

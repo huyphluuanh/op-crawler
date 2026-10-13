@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COMMANDS, sinceDate } from '../supabase/functions/_shared/commands.ts';
+import { COMMANDS, DEFAULT_SORT, isSort, sinceDate } from '../supabase/functions/_shared/commands.ts';
 
 describe('sinceDate', () => {
   it('lùi N ngày, định dạng YYYY-MM-DD', () => {
@@ -19,10 +19,19 @@ describe('COMMANDS', () => {
       }
     }
   });
-  it('/crawl và /binhluan có ô so_ngay', () => {
+  it('/crawl và /binhluan có ô so_ngay, sap_xep, tra_loi', () => {
     for (const name of ['crawl', 'binhluan']) {
       const c = COMMANDS.find((c) => c.name === name)!;
-      expect('options' in c && c.options?.some((o) => o.name === 'so_ngay')).toBe(true);
+      const names = 'options' in c ? (c.options ?? []).map((o) => o.name) : [];
+      expect(names).toEqual(expect.arrayContaining(['so_ngay', 'sap_xep', 'tra_loi']));
     }
+  });
+  it('lựa chọn sắp xếp là giá trị Apify hợp lệ, mặc định Mới nhất', () => {
+    const c = COMMANDS.find((c) => c.name === 'crawl')!;
+    const sort = ('options' in c ? c.options ?? [] : []).find((o) => o.name === 'sap_xep') as { choices: { value: string }[] };
+    expect(sort.choices.map((x) => x.value)).toEqual(['RECENT_ACTIVITY', 'RANKED_THREADED', 'RANKED_UNFILTERED']);
+    expect(DEFAULT_SORT).toBe('RECENT_ACTIVITY');
+    expect(isSort('RANKED_THREADED')).toBe(true);
+    expect(isSort('NEWEST')).toBe(false);
   });
 });

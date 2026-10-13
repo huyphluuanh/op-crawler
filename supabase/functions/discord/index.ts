@@ -1,6 +1,8 @@
 // Discord Interactions endpoint: nhận lệnh /crawl, /baocao, /kiemtra, /lichsu và "Crawl link này".
 // Discord bắt trả lời trong 3 giây → trả "đang xử lý" (deferred) rồi làm tiếp ở nền.
-import { DEFAULT_COMMENTS, DEFAULT_COMMENTS_ONLY, DEFAULT_POSTS, MESSAGE_COMMAND, sinceDate } from '../_shared/commands.ts';
+import {
+  DEFAULT_COMMENTS, DEFAULT_COMMENTS_ONLY, DEFAULT_POSTS, DEFAULT_SORT, isSort, MESSAGE_COMMAND, sinceDate, type Sort, SORTS,
+} from '../_shared/commands.ts';
 import { COLOR, editOriginal, type MessageBody, verifySignature } from '../_shared/discord.ts';
 import { background, db, type Job } from '../_shared/db.ts';
 import { COMMENTS_ACTOR, estimateCost, POSTS_ACTOR, startActor, webhookUrl } from '../_shared/apify.ts';
@@ -95,12 +97,15 @@ async function handleCrawl(i: Interaction): Promise<MessageBody> {
   const postsLimit = option<number>(i, 'so_bai') ?? DEFAULT_POSTS;
   const commentsPerPost = option<number>(i, 'binh_luan') ?? DEFAULT_COMMENTS;
   const days = option<number>(i, 'so_ngay');
+  const { sort, replies } = commentOptions(i);
   const user = i.member?.user ?? i.user;
 
   const { data: job, error } = await db.from('jobs').insert({
     input_urls: urls,
     posts_limit: postsLimit,
     comments_per_post: commentsPerPost,
+    comments_sort: sort,
+    include_replies: replies,
     status: 'crawling_posts',
     discord_app_id: i.application_id,
     discord_token: i.token,
@@ -132,13 +137,23 @@ async function handleCrawl(i: Interaction): Promise<MessageBody> {
         urls.map((u) => `• ${u}`).join('\n') +
         `\n\nTối đa **${postsLimit}** bài/fanpage` +
         (days ? ` đăng trong **${days} ngày** gần nhất (từ ${sinceDate(days)})` : '') +
-        `, **${commentsPerPost}** bình luận/bài.` +
+        (commentsPerPost > 0
+          ? `, **${commentsPerPost}** bình luận/bài (${commentLabel(sort, replies)}).`
+          : ', không lấy bình luận.') +
         (days ? `\nMuốn lấy hết bài trong ${days} ngày mà fanpage đăng nhiều thì tăng \`so_bai\`.` : '') +
         `\nChi phí Apify ước tính tối đa ~$${cost.toFixed(2)}.` +
         `\nThường mất 1–10 phút. Xong bot sẽ báo kết quả ở đây.`,
     }],
   };
 }
+
+function commentOptions(i: Interaction): { sort: Sort; replies: boolean } {
+  const s = option<string>(i, 'sap_xep');
+  return { sort: isSort(s) ? s : DEFAULT_SORT, replies: option<boolean>(i, 'tra_loi') ?? false };
+}
+
+const commentLabel = (sort: Sort, replies: boolean) =>
+  `${SORTS[sort].toLowerCase()}${replies ? ', kèm bình luận trả lời' : ', không lấy trả lời'}`;
 
 // ---------------- /binhluan ----------------
 async function handleCommentsOnly(i: Interaction): Promise<MessageBody> {
@@ -158,12 +173,18 @@ async function handleCommentsOnly(i: Interaction): Promise<MessageBody> {
   }
   const perPost = option<number>(i, 'so_luong') ?? DEFAULT_COMMENTS_ONLY;
   const days = option<number>(i, 'so_ngay');
+  const picked = commentOptions(i);
+  // Bộ lọc ngày của Apify chỉ chạy đúng khi lấy mới nhất trước
+  const sort: Sort = days ? 'RECENT_ACTIVITY' : picked.sort;
+  const replies = picked.replies;
   const user = i.member?.user ?? i.user;
 
   const { data: job, error } = await db.from('jobs').insert({
     input_urls: urls,
     posts_limit: 0, // 0 = chế độ chỉ lấy bình luận
     comments_per_post: perPost,
+    comments_sort: sort,
+    include_replies: replies,
     status: 'crawling_comments',
     discord_app_id: i.application_id,
     discord_token: i.token,
@@ -176,9 +197,8 @@ async function handleCommentsOnly(i: Interaction): Promise<MessageBody> {
     const runId = await startActor(COMMENTS_ACTOR, {
       startUrls: urls.map((url) => ({ url })),
       resultsLimit: perPost,
-      includeNestedComments: false,
-      // Lọc theo ngày cần sắp xếp mới nhất trước
-      viewOption: days ? 'RECENT_ACTIVITY' : 'RANKED_UNFILTERED',
+      includeNestedComments: replies,
+      viewOption: sort,
       ...(days ? { onlyCommentsNewerThan: sinceDate(days) } : {}),
     }, webhookUrl(job.id, 'comments'));
     await db.from('jobs').update({ apify_comments_run: runId }).eq('id', job.id);
@@ -196,7 +216,9 @@ async function handleCommentsOnly(i: Interaction): Promise<MessageBody> {
         (skipped.length ? `\n\nBỏ qua (link fanpage, không phải bài): ${skipped.join(' ')}` : '') +
         `\n\nTối đa **${perPost}** bình luận/bài` +
         (days ? ` viết trong **${days} ngày** gần nhất (từ ${sinceDate(days)})` : '') +
-        `. Chi phí Apify ước tính tối đa ~$${estimateCost(0, urls.length * perPost).toFixed(2)}.` +
+        ` (${commentLabel(sort, replies)}).` +
+        (days && picked.sort !== 'RECENT_ACTIVITY' ? '\nĐã chuyển sang "Mới nhất" vì có lọc theo số ngày.' : '') +
+        `\nChi phí Apify ước tính tối đa ~$${estimateCost(0, urls.length * perPost).toFixed(2)}.` +
         `\nThường mất 1–5 phút. Xong bot sẽ báo kết quả ở đây.`,
     }],
   };

@@ -8,12 +8,15 @@ lưu vào Supabase, rồi báo cáo dòng máy nào được khách chọn nhi�
 
 | Lệnh | Việc |
 |---|---|
-| `/crawl link:<link>` | Crawl 1 bài viết hoặc cả fanpage (dán nhiều link cách nhau dấu cách). Tùy chọn `so_bai` (mặc định 20 bài/fanpage), `binh_luan` (mặc định 30 bình luận/bài, 0 = bỏ qua), `so_ngay` (chỉ bài đăng trong N ngày gần nhất) |
-| `/binhluan link:<link bài>` | **Chỉ** lấy bình luận của đúng các bài bạn dán (không lấy cả fanpage). Tùy chọn `so_luong` (mặc định 100 bình luận/bài), `so_ngay` (chỉ bình luận viết trong N ngày gần nhất). Link fanpage sẽ bị bỏ qua |
+| `/crawl link:<link>` | Crawl 1 bài viết hoặc cả fanpage (dán nhiều link cách nhau dấu cách). Tùy chọn `so_bai` (mặc định 20 bài/fanpage), `binh_luan` (mặc định 30 bình luận/bài, 0 = bỏ qua), `so_ngay` (chỉ bài đăng trong N ngày gần nhất), `sap_xep`, `tra_loi` (xem dưới) |
+| `/binhluan link:<link bài>` | **Chỉ** lấy bình luận của đúng các bài bạn dán (không lấy cả fanpage). Tùy chọn `so_luong` (mặc định 100 bình luận/bài), `so_ngay` (chỉ bình luận viết trong N ngày gần nhất), `sap_xep`, `tra_loi`. Link fanpage sẽ bị bỏ qua |
 | Chuột phải tin nhắn → **Ứng dụng → Crawl link này** | Dán link vào kênh chat như bình thường, rồi crawl luôn link trong tin nhắn đó |
 | `/baocao` | Xếp hạng dòng máy + tỉ lệ theo hãng, kèm file CSV mở bằng Excel. Lọc `fanpage:<tên/link>`, `so_ngay:<N>` |
 | `/kiemtra noidung:<chữ>` | Thử nhận diện dòng máy trong một đoạn chữ (miễn phí, không gọi Apify) |
 | `/lichsu` | 10 lần crawl gần nhất và trạng thái |
+
+Bình luận: `sap_xep` = **Mới nhất** (mặc định) / Phù hợp nhất / Tất cả (thứ tự Facebook);
+`tra_loi` = lấy cả bình luận trả lời bên dưới (mặc định Không, tốn thêm Apify). Số bình luận là tính **cho mỗi bài**.
 
 ## Web báo cáo
 

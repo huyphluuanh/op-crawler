@@ -12,6 +12,8 @@ export interface Job {
   input_urls: string[];
   posts_limit: number;
   comments_per_post: number;
+  comments_sort: string;
+  include_replies: boolean;
   status: string;
   apify_posts_run: string | null;
   apify_comments_run: string | null;
