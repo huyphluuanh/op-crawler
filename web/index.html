@@ -272,7 +272,7 @@ tbody tr:hover { background: var(--wash); }
   let key = null;
   let data = null;
   let reqId = 0;
-  const prefs = Object.assign({ days: 30, from: '', to: '', page: '', src: 'all' }, JSON.parse(store.get(PREF_STORE) || '{}'));
+  const prefs = Object.assign({ days: 0, from: '', to: '', page: '', src: 'all' }, JSON.parse(store.get(PREF_STORE) || '{}'));
   const view = { q: '', brand: '', sort: 'value', dir: -1, shown: PAGE_SIZE };
 
   // ---------- Khóa ----------
@@ -421,7 +421,7 @@ tbody tr:hover { background: var(--wash); }
         <div class="track" data-tip="${esc(b.brand)}|${b.value}|${b.comment}|${b.post}|${b.models}|${pct}">
           <div class="fill" style="width:${(b.value / maxB * 100).toFixed(2)}%;background:${colorOf(b.brand)}"></div></div>
         <div class="num"><b>${fmt.format(b.value)}</b> <span class="pct">${fmtPct(pct)}</span></div>`;
-    }).join('') : '<div class="empty" style="grid-column:1/-1">Chưa có dữ liệu trong khoảng này. Thử chọn "Tất cả" hoặc crawl thêm bằng bot Discord.</div>';
+    }).join('') : `<div class="empty" style="grid-column:1/-1">${emptyHint()}</div>`;
 
     // Chip lọc hãng (giữ thứ tự của biểu đồ)
     if (view.brand && !brands.some((b) => b.brand === view.brand)) view.brand = '';
@@ -430,6 +430,20 @@ tbody tr:hover { background: var(--wash); }
         <span class="dot" style="background:${colorOf(b.brand)}"></span>${esc(b.brand)} <span class="sub">${b.models}</span></button>`)).join('');
 
     renderTable(rows, total);
+  }
+
+  // Khoảng đang chọn trống nhưng database có dữ liệu ở thời gian khác → nói rõ và cho bấm xem
+  function emptyHint() {
+    const r = data.data_range || {};
+    const vn = (t) => new Date(t).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    const filtered = prefs.days !== 0 || prefs.page || prefs.src !== 'all';
+    if (r.min && filtered) {
+      return `Không có lượt nhắc dòng máy nào trong bộ lọc đang chọn.<br>
+        Dữ liệu đã crawl có bình luận / bài viết từ <b>${vn(r.min)}</b> đến <b>${vn(r.max)}</b>
+        (web tính theo ngày khách viết bình luận, không phải ngày crawl).<br><br>
+        <button type="button" class="btn primary" id="showAll">Xem tất cả thời gian</button>`;
+    }
+    return 'Chưa có dòng máy nào được nhắc tới. Dùng bot Discord <code>/crawl</code> hoặc <code>/binhluan</code> để lấy dữ liệu.';
   }
 
   function filteredRows(rows) {
@@ -492,6 +506,10 @@ tbody tr:hover { background: var(--wash); }
       savePrefs(); load();
     });
   }
+  $('#brands').addEventListener('click', (e) => {
+    if (e.target.id !== 'showAll') return;
+    prefs.days = 0; prefs.page = ''; prefs.src = 'all'; savePrefs(); load();
+  });
   $('#page').addEventListener('change', (e) => { prefs.page = e.target.value; savePrefs(); load(); });
   $('#sources').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;

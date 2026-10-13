@@ -56,16 +56,28 @@ function isoDate(v: unknown): string | null {
 /** Item lỗi Apify trả về (vd link không truy cập được) có dạng { error, url }. */
 export const isErrorItem = (it: Item) => typeof it.error === 'string' || typeof it.errorDescription === 'string';
 
+/** Đoạn đầu đường dẫn kiểu "reel", "watch", "share"… không phải tên fanpage. */
+const pageSlug = (u: string | null) => {
+  const seg = urlKey(u).split('/')[1] ?? '';
+  return seg && !NOT_PAGE.has(seg) ? seg : null;
+};
+const realName = (v: unknown) => {
+  const s = str(v);
+  return s && !NOT_PAGE.has(s.toLowerCase()) ? s : null;
+};
+
 export function mapPost(it: Item, jobId: number): PostRow | null {
   if (isErrorItem(it)) return null;
   const url = str(it.url) ?? str(it.topLevelUrl) ?? str(it.postUrl);
   const key = str(String(it.postId ?? '')) ?? str(it.facebookId) ?? url;
   if (!key) return null;
+  const pageUrlRaw = str(it.facebookUrl) ?? str(it.inputUrl) ?? str(it.pageUrl);
+  const slug = pageSlug(pageUrlRaw) ?? pageSlug(url);
   return {
     post_key: key,
     url,
-    page_url: str(it.facebookUrl) ?? str(it.inputUrl) ?? str(it.pageUrl),
-    page_name: str(it.user?.name) ?? str(it.pageName),
+    page_url: slug ? `https://www.facebook.com/${slug}` : pageUrlRaw && !isPostUrl(pageUrlRaw) ? pageUrlRaw : null,
+    page_name: realName(it.user?.name) ?? realName(it.pageName) ?? slug,
     text: str(it.text) ?? str(it.message) ?? str(it.postText),
     posted_at: isoDate(it.time) ?? isoDate(it.timestamp),
     likes: num(it.likes),
@@ -141,7 +153,10 @@ export function isPostUrl(u: string): boolean {
     .test(u);
 }
 
-const NOT_PAGE = new Set(['permalink.php', 'story.php', 'photo.php', 'photo', 'share', 'watch', 'reel', 'groups', 'profile.php']);
+const NOT_PAGE = new Set([
+  'permalink.php', 'story.php', 'photo.php', 'photo', 'photos', 'share', 'watch', 'reel', 'reels', 'videos',
+  'groups', 'profile.php', 'posts', 'events', 'stories',
+]);
 
 /**
  * Bài viết "tạm" khi chỉ lấy bình luận (không chạy actor lấy bài): khóa theo URL,

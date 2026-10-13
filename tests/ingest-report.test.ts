@@ -29,6 +29,14 @@ describe('mapPost', () => {
       job_id: 7,
     });
   });
+  it('link reel / watch không bị lấy làm tên fanpage', () => {
+    const p = mapPost({ postId: '9', url: 'https://www.facebook.com/reel/123', facebookUrl: 'https://www.facebook.com/reel/123', pageName: 'reel' }, 1)!;
+    expect(p.page_name).toBeNull();
+    expect(p.page_url).toBeNull();
+    const q = mapPost({ postId: '9', url: 'https://www.facebook.com/reel/123', facebookUrl: 'https://www.facebook.com/opinhinh', pageName: 'reel', user: { name: 'Ốp Xinh' } }, 1)!;
+    expect(q.page_name).toBe('Ốp Xinh');
+    expect(q.page_url).toBe('https://www.facebook.com/opinhinh');
+  });
   it('bỏ item lỗi của Apify', () => {
     expect(mapPost({ error: 'not found', url: 'x' }, 1)).toBeNull();
   });
