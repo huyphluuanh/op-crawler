@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Báo cáo dòng máy</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='8' y='2' width='16' height='28' rx='4' fill='%232a78d6'/%3E%3Ccircle cx='13' cy='8' r='2.5' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #6f6d68;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --ring: rgba(11, 11, 11, 0.10);
+  --accent: #2a78d6;
+  --accent-ink: #ffffff;
+  --wash: rgba(42, 120, 214, 0.08);
+  --danger: #b42318;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7; --s8: #e34948;
+  --other: #898781; --unknown: #c3c2b7;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #a3a29b;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255, 255, 255, 0.10);
+    --accent: #3987e5; --wash: rgba(57, 135, 229, 0.14); --danger: #f97066;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+    --other: #898781; --unknown: #5a5955;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #a3a29b;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255, 255, 255, 0.10);
+  --accent: #3987e5; --wash: rgba(57, 135, 229, 0.14); --danger: #f97066;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  --other: #898781; --unknown: #5a5955;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--page); color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.wrap { max-width: 1120px; margin: 0 auto; padding: 20px 16px 48px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; margin-bottom: 16px; }
+h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 16px; margin: 0; }
+.sub { color: var(--muted); font-size: 13px; }
+
+.card { background: var(--surface); border-radius: 12px; box-shadow: 0 0 0 1px var(--ring); padding: 16px; }
+.card + .card, .grid + .card, .card + .grid { margin-top: 16px; }
+.grid > .card { margin-top: 0; }
+.card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-bottom: 12px; }
+
+/* Bộ lọc */
+.filters { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.field { display: flex; align-items: center; gap: 8px; }
+.field > span { color: var(--ink-2); font-size: 13px; }
+.seg { display: inline-flex; flex-wrap: wrap; border-radius: 8px; box-shadow: 0 0 0 1px var(--ring); overflow: hidden; }
+.seg button {
+  border: 0; background: transparent; color: var(--ink); font: inherit; padding: 6px 12px; cursor: pointer;
+  min-height: 34px;
+}
+.seg button + button { box-shadow: -1px 0 0 var(--ring); }
+.seg button:hover { background: var(--wash); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+select, input[type="date"], input[type="search"], input[type="password"] {
+  font: inherit; color: var(--ink); background: var(--surface); border: 0; border-radius: 8px;
+  box-shadow: 0 0 0 1px var(--ring); padding: 6px 10px; min-height: 34px; max-width: 100%;
+}
+select:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#custom { display: none; gap: 6px; align-items: center; }
+#custom.on { display: flex; }
+.btn {
+  font: inherit; border: 0; border-radius: 8px; padding: 6px 12px; min-height: 34px; cursor: pointer;
+  background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--ring);
+}
+.btn:hover { background: var(--wash); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); box-shadow: none; font-weight: 600; }
+
+/* Thẻ số */
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.stat .label { color: var(--ink-2); font-size: 13px; }
+.stat .value { font-size: 28px; font-weight: 650; letter-spacing: -0.02em; margin-top: 2px; }
+.stat .hint { color: var(--muted); font-size: 12px; }
+@media (max-width: 760px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stat .value { font-size: 22px; } }
+
+/* Biểu đồ hãng */
+.bars { display: grid; grid-template-columns: max-content 1fr max-content; gap: 6px 12px; align-items: center; }
+.bars .name { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.track { position: relative; height: 22px; cursor: default; }
+.track::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 1px; background: var(--axis); }
+.fill { position: absolute; left: 0; top: 3px; bottom: 3px; border-radius: 0 4px 4px 0; min-width: 2px; }
+.track:hover .fill { filter: brightness(1.08); }
+.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.num b { font-weight: 600; }
+.num .pct { color: var(--ink-2); display: inline-block; min-width: 52px; }
+
+/* Bảng chi tiết */
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.chip {
+  font: inherit; font-size: 13px; border: 0; border-radius: 999px; padding: 4px 10px; cursor: pointer;
+  background: transparent; color: var(--ink); box-shadow: 0 0 0 1px var(--ring); display: inline-flex; gap: 6px; align-items: center;
+}
+.chip[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--accent); font-weight: 600; }
+.table-wrap { overflow-x: auto; margin: 0 -16px; padding: 0 16px; }
+table { width: 100%; border-collapse: collapse; min-width: 640px; }
+th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--grid); }
+th { font-size: 12px; font-weight: 600; color: var(--ink-2); white-space: nowrap; user-select: none; }
+th.sortable { cursor: pointer; }
+th.sortable:hover { color: var(--ink); }
+th .arrow { opacity: 0.35; margin-left: 2px; }
+th[aria-sort] .arrow { opacity: 1; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+td.rank { color: var(--muted); font-variant-numeric: tabular-nums; width: 36px; }
+td.model { font-weight: 500; }
+td.brand { color: var(--ink-2); white-space: nowrap; }
+td.brand .dot { display: inline-block; margin-right: 6px; vertical-align: -1px; }
+td.share { width: 22%; min-width: 120px; }
+.mini { height: 8px; border-radius: 0 3px 3px 0; min-width: 2px; }
+tbody tr:hover { background: var(--wash); }
+.empty { color: var(--muted); padding: 24px 0; text-align: center; }
+.more { margin-top: 12px; text-align: center; }
+
+.notice { border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; box-shadow: 0 0 0 1px var(--ring); background: var(--surface); }
+.notice.err { box-shadow: 0 0 0 1px var(--danger); color: var(--danger); }
+.legend-note { color: var(--muted); font-size: 12px; margin-top: 10px; }
+.loading { opacity: 0.55; transition: opacity 0.15s; }
+
+#tip {
+  position: fixed; pointer-events: none; z-index: 10; display: none; max-width: 260px;
+  background: var(--ink); color: var(--page); border-radius: 8px; padding: 8px 10px; font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+#login { max-width: 460px; margin: 40px auto; }
+#login form { display: flex; gap: 8px; margin-top: 12px; }
+#login input { flex: 1; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Báo cáo dòng máy in ốp</h1>
+    <div class="sub" id="updated"></div>
+  </header>
+
+  <div id="demoNote" class="notice" hidden>Đang xem <b>dữ liệu mẫu</b> (link có <code>?demo</code>). Số liệu không có thật.</div>
+  <div id="error" class="notice err" hidden></div>
+
+  <section id="login" class="card" hidden>
+    <h2>Nhập khóa xem báo cáo</h2>
+    <p class="sub">Khóa nằm trong file <code>report-link.txt</code> (tạo bởi CAI-DAT.cmd). Mở link trong file đó là vào thẳng, không cần nhập.</p>
+    <form id="loginForm">
+      <input id="keyInput" type="password" autocomplete="off" placeholder="Dán khóa vào đây" aria-label="Khóa xem báo cáo">
+      <button class="btn primary" type="submit">Xem</button>
+    </form>
+  </section>
+
+  <main id="app" hidden>
+    <section class="card">
+      <div class="filters" role="group" aria-label="Bộ lọc">
+        <div class="field">
+          <span>Thời gian</span>
+          <div class="seg" id="ranges">
+            <button type="button" data-days="7">7 ngày</button>
+            <button type="button" data-days="30">30 ngày</button>
+            <button type="button" data-days="90">90 ngày</button>
+            <button type="button" data-days="0">Tất cả</button>
+            <button type="button" data-days="custom">Tùy chọn</button>
+          </div>
+        </div>
+        <div class="field" id="custom">
+          <input type="date" id="from" aria-label="Từ ngày"> <span>→</span> <input type="date" id="to" aria-label="Đến ngày">
+        </div>
+        <label class="field"><span>Fanpage</span>
+          <select id="page"><option value="">Tất cả fanpage</option></select>
+        </label>
+        <div class="field">
+          <span>Nguồn</span>
+          <div class="seg" id="sources">
+            <button type="button" data-src="all">Tất cả</button>
+            <button type="button" data-src="comment">Bình luận</button>
+            <button type="button" data-src="post">Bài viết</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid" id="stats"></div>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 id="brandTitle">Tỷ lệ theo hãng</h2>
+      </div>
+      <div class="bars" id="brands"></div>
+      <div class="legend-note">Số = lượt nhắc tới dòng máy của hãng. Mỗi bài / bình luận tính tối đa 1 lần cho mỗi dòng máy.
+        "Chưa rõ hãng" = viết kiểu "A54" không ghi Samsung hay OPPO.</div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Chi tiết từng dòng máy</h2>
+        <div class="tools">
+          <input type="search" id="q" placeholder="Tìm dòng máy…" aria-label="Tìm dòng máy">
+          <button type="button" class="btn" id="csv">Tải Excel (CSV)</button>
+        </div>
+      </div>
+      <div class="chips" id="brandChips" role="group" aria-label="Lọc theo hãng"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th class="sortable" data-sort="model">Dòng máy<span class="arrow">↕</span></th>
+              <th class="sortable" data-sort="brand">Hãng<span class="arrow">↕</span></th>
+              <th class="sortable n" data-sort="comment_mentions" title="Khách hỏi / đặt trong bình luận">💬 Bình luận<span class="arrow">↕</span></th>
+              <th class="sortable n" data-sort="post_mentions" title="Shop đăng mẫu trong bài viết">📝 Bài viết<span class="arrow">↕</span></th>
+              <th class="sortable n" data-sort="value">Số lượng<span class="arrow">↕</span></th>
+              <th class="n">Tỷ lệ</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="more" id="more"></div>
+    </section>
+  </main>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+(() => {
+  const API = 'https://xphjrfuogetlvgxvclzp.supabase.co/functions/v1/report-api';
+  const KEY_STORE = 'op-report-key';
+  const PREF_STORE = 'op-report-prefs';
+  const PAGE_SIZE = 50;
+
+  // Màu cố định theo hãng (không đổi theo thứ hạng); hãng ngoài 8 hãng chính → xám "khác".
+  const BRAND_COLOR = {
+    Apple: 'var(--s1)', Samsung: 'var(--s2)', Xiaomi: 'var(--s3)', OPPO: 'var(--s4)',
+    vivo: 'var(--s5)', realme: 'var(--s6)', Huawei: 'var(--s7)', Honor: 'var(--s8)',
+    'Chưa rõ hãng': 'var(--unknown)',
+  };
+  const colorOf = (b) => BRAND_COLOR[b] || 'var(--other)';
+
+  const $ = (s) => document.querySelector(s);
+  const fmt = new Intl.NumberFormat('vi-VN');
+  const fmtPct = (v) => (v >= 10 ? v.toFixed(0) : v.toFixed(1)).replace('.', ',') + '%';
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch { /* bỏ qua */ } },
+    del(k) { try { localStorage.removeItem(k); } catch { /* bỏ qua */ } },
+  };
+
+  const demo = new URLSearchParams(location.search).has('demo');
+  let key = null;
+  let data = null;
+  let reqId = 0;
+  const prefs = Object.assign({ days: 30, from: '', to: '', page: '', src: 'all' }, JSON.parse(store.get(PREF_STORE) || '{}'));
+  const view = { q: '', brand: '', sort: 'value', dir: -1, shown: PAGE_SIZE };
+
+  // ---------- Khóa ----------
+  function initKey() {
+    const m = location.hash.match(/key=([^&]+)/);
+    if (m) {
+      key = decodeURIComponent(m[1]);
+      store.set(KEY_STORE, key);
+      history.replaceState(null, '', location.pathname + location.search);
+    } else {
+      key = store.get(KEY_STORE);
+    }
+  }
+  $('#loginForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = $('#keyInput').value.trim();
+    if (!v) return;
+    key = v; store.set(KEY_STORE, v);
+    $('#login').hidden = true;
+    start();
+  });
+
+  // ---------- Ngày (giờ Việt Nam) ----------
+  function vnToday() {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
+  }
+  function addDays(d, n) {
+    const t = new Date(d + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + n);
+    return t.toISOString().slice(0, 10);
+  }
+  function currentRange() {
+    if (prefs.days === 'custom') return { from: prefs.from || '', to: prefs.to || '' };
+    if (!prefs.days) return { from: '', to: '' };
+    const today = vnToday();
+    return { from: addDays(today, -(Number(prefs.days) - 1)), to: today };
+  }
+  const viDate = (d) => d ? d.split('-').reverse().join('/') : '';
+
+  // ---------- Tải dữ liệu ----------
+  async function load() {
+    const id = ++reqId;
+    const { from, to } = currentRange();
+    document.querySelector('main').classList.add('loading');
+    $('#error').hidden = true;
+    try {
+      let json;
+      if (demo) {
+        json = demoData(from, to, prefs.page);
+      } else {
+        const qs = new URLSearchParams();
+        if (from) qs.set('from', from);
+        if (to) qs.set('to', to);
+        if (prefs.page) qs.set('page', prefs.page);
+        const res = await fetch(`${API}?${qs}`, { headers: { 'x-report-key': key } });
+        json = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+          store.del(KEY_STORE); key = null;
+          showLogin('Khóa không đúng hoặc đã đổi. Mở lại link trong report-link.txt.');
+          return;
+        }
+        if (!res.ok) throw new Error(json.error || `Lỗi máy chủ (${res.status})`);
+      }
+      if (id !== reqId) return;
+      data = json;
+      view.shown = PAGE_SIZE;
+      render();
+    } catch (e) {
+      if (id !== reqId) return;
+      const msg = String(e.message || e);
+      $('#error').textContent = /fetch/i.test(msg)
+        ? 'Không kết nối được máy chủ báo cáo. Nếu vừa cài, hãy chạy CAI-DAT.cmd; nếu đã lâu không dùng, Supabase có thể đang tạm dừng (Dashboard → Restore project).'
+        : msg;
+      $('#error').hidden = false;
+    } finally {
+      if (id === reqId) document.querySelector('main').classList.remove('loading');
+    }
+  }
+
+  function showLogin(msg) {
+    $('#app').hidden = true;
+    $('#login').hidden = false;
+    if (msg) { $('#error').textContent = msg; $('#error').hidden = false; }
+    $('#keyInput').focus();
+  }
+
+  // ---------- Tính toán theo nguồn ----------
+  const valueOf = (r) => prefs.src === 'comment' ? Number(r.comment_mentions) : prefs.src === 'post' ? Number(r.post_mentions) : Number(r.total);
+
+  function modelRows() {
+    return (data.models || []).map((r) => ({ ...r, value: valueOf(r) })).filter((r) => r.value > 0);
+  }
+  function brandRows(rows) {
+    const map = new Map();
+    for (const r of rows) {
+      const b = map.get(r.brand) || { brand: r.brand, value: 0, comment: 0, post: 0, models: 0 };
+      b.value += r.value; b.comment += Number(r.comment_mentions); b.post += Number(r.post_mentions); b.models++;
+      map.set(r.brand, b);
+    }
+    // "Chưa rõ hãng" luôn xếp cuối để không lẫn với hãng thật
+    return [...map.values()].sort((a, b) =>
+      (a.brand === 'Chưa rõ hãng') - (b.brand === 'Chưa rõ hãng') || b.value - a.value);
+  }
+
+  // ---------- Vẽ ----------
+  function render() {
+    // Bộ lọc
+    document.querySelectorAll('#ranges button').forEach((b) =>
+      b.setAttribute('aria-pressed', String(String(prefs.days) === b.dataset.days)));
+    $('#custom').classList.toggle('on', prefs.days === 'custom');
+    document.querySelectorAll('#sources button').forEach((b) =>
+      b.setAttribute('aria-pressed', String(prefs.src === b.dataset.src)));
+    const sel = $('#page');
+    const pages = data.pages || [];
+    sel.innerHTML = '<option value="">Tất cả fanpage</option>' +
+      pages.map((p) => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+    sel.value = pages.includes(prefs.page) ? prefs.page : '';
+
+    const last = data.last_crawl ? new Date(data.last_crawl).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : null;
+    $('#updated').textContent = last ? `Lần crawl gần nhất: ${last}` : '';
+
+    const rows = modelRows();
+    const brands = brandRows(rows);
+    const total = rows.reduce((a, r) => a + r.value, 0);
+    const known = brands.filter((b) => b.brand !== 'Chưa rõ hãng');
+    const top = rows[0];
+    const sc = data.scope || {};
+
+    // Thẻ số
+    const srcLabel = { all: 'bài + bình luận', comment: 'chỉ bình luận', post: 'chỉ bài viết' }[prefs.src];
+    $('#stats').innerHTML = [
+      { label: 'Lượt nhắc dòng máy', value: fmt.format(total), hint: srcLabel },
+      { label: 'Dòng máy khác nhau', value: fmt.format(rows.length), hint: `${known.length} hãng` },
+      { label: 'Bình luận đã quét', value: fmt.format(sc.comments || 0), hint: `${fmt.format(sc.posts || 0)} bài · ${fmt.format(sc.pages || 0)} fanpage` },
+      { label: 'Dòng máy hot nhất', value: top ? esc(top.model) : '—', hint: top ? `${fmt.format(top.value)} lượt · ${fmtPct(top.value / total * 100)}` : 'chưa có dữ liệu' },
+    ].map((s) => `<div class="card stat"><div class="label">${s.label}</div><div class="value">${s.value}</div><div class="hint">${s.hint}</div></div>`).join('');
+    const hot = $('#stats .stat:last-child .value');
+    if (hot && top && top.model.length > 16) hot.style.fontSize = '20px';
+
+    // Hãng
+    const { from, to } = currentRange();
+    $('#brandTitle').textContent = 'Tỷ lệ theo hãng' + (from ? ` · ${viDate(from)} – ${viDate(to)}` : '');
+    const maxB = brands[0] ? Math.max(...brands.map((b) => b.value)) : 1;
+    $('#brands').innerHTML = brands.length ? brands.map((b) => {
+      const pct = b.value / total * 100;
+      return `<div class="name"><span class="dot" style="background:${colorOf(b.brand)}"></span>${esc(b.brand)}</div>
+        <div class="track" data-tip="${esc(b.brand)}|${b.value}|${b.comment}|${b.post}|${b.models}|${pct}">
+          <div class="fill" style="width:${(b.value / maxB * 100).toFixed(2)}%;background:${colorOf(b.brand)}"></div></div>
+        <div class="num"><b>${fmt.format(b.value)}</b> <span class="pct">${fmtPct(pct)}</span></div>`;
+    }).join('') : '<div class="empty" style="grid-column:1/-1">Chưa có dữ liệu trong khoảng này. Thử chọn "Tất cả" hoặc crawl thêm bằng bot Discord.</div>';
+
+    // Chip lọc hãng (giữ thứ tự của biểu đồ)
+    if (view.brand && !brands.some((b) => b.brand === view.brand)) view.brand = '';
+    $('#brandChips').innerHTML = [`<button type="button" class="chip" data-brand="" aria-pressed="${!view.brand}">Tất cả hãng</button>`]
+      .concat(brands.map((b) => `<button type="button" class="chip" data-brand="${esc(b.brand)}" aria-pressed="${view.brand === b.brand}">
+        <span class="dot" style="background:${colorOf(b.brand)}"></span>${esc(b.brand)} <span class="sub">${b.models}</span></button>`)).join('');
+
+    renderTable(rows, total);
+  }
+
+  function filteredRows(rows) {
+    const q = view.q.trim().toLowerCase();
+    let out = rows.filter((r) => (!view.brand || r.brand === view.brand) && (!q || r.model.toLowerCase().includes(q)));
+    const k = view.sort;
+    out.sort((a, b) => {
+      const va = a[k], vb = b[k];
+      const c = typeof va === 'string' ? va.localeCompare(vb, 'vi', { numeric: true }) : Number(va) - Number(vb);
+      return c * view.dir || Number(b.value) - Number(a.value);
+    });
+    return out;
+  }
+
+  function renderTable(rows, total) {
+    document.querySelectorAll('th.sortable').forEach((th) => {
+      const on = th.dataset.sort === view.sort;
+      if (on) th.setAttribute('aria-sort', view.dir > 0 ? 'ascending' : 'descending'); else th.removeAttribute('aria-sort');
+      th.querySelector('.arrow').textContent = on ? (view.dir > 0 ? '↑' : '↓') : '↕';
+    });
+    const list = filteredRows(rows);
+    const maxV = Math.max(1, ...rows.map((r) => r.value));
+    $('#rows').innerHTML = list.length ? list.slice(0, view.shown).map((r, i) => `
+      <tr>
+        <td class="rank">${i + 1}</td>
+        <td class="model">${esc(r.model)}</td>
+        <td class="brand"><span class="dot" style="background:${colorOf(r.brand)}"></span>${esc(r.brand)}</td>
+        <td class="n">${fmt.format(r.comment_mentions)}</td>
+        <td class="n">${fmt.format(r.post_mentions)}</td>
+        <td class="n"><b>${fmt.format(r.value)}</b></td>
+        <td class="n">${fmtPct(r.value / total * 100)}</td>
+        <td class="share"><div class="mini" style="width:${(r.value / maxV * 100).toFixed(2)}%;background:${colorOf(r.brand)}"></div></td>
+      </tr>`).join('') : '<tr><td colspan="8" class="empty">Không có dòng máy nào khớp bộ lọc.</td></tr>';
+    $('#more').innerHTML = list.length > view.shown
+      ? `<button type="button" class="btn" id="showMore">Xem thêm ${Math.min(PAGE_SIZE, list.length - view.shown)} dòng (còn ${list.length - view.shown})</button>` : '';
+  }
+
+  // ---------- Sự kiện ----------
+  function savePrefs() { store.set(PREF_STORE, JSON.stringify(prefs)); }
+
+  $('#ranges').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    const d = b.dataset.days;
+    if (d === 'custom') {
+      const r = currentRange();
+      prefs.days = 'custom';
+      prefs.from = prefs.from || r.from || addDays(vnToday(), -29);
+      prefs.to = prefs.to || r.to || vnToday();
+      $('#from').value = prefs.from; $('#to').value = prefs.to;
+    } else {
+      prefs.days = Number(d);
+    }
+    savePrefs(); load();
+  });
+  for (const id of ['from', 'to']) {
+    $('#' + id).addEventListener('change', () => {
+      prefs.from = $('#from').value; prefs.to = $('#to').value;
+      if (prefs.from && prefs.to && prefs.from > prefs.to) [prefs.from, prefs.to] = [prefs.to, prefs.from];
+      $('#from').value = prefs.from; $('#to').value = prefs.to;
+      savePrefs(); load();
+    });
+  }
+  $('#page').addEventListener('change', (e) => { prefs.page = e.target.value; savePrefs(); load(); });
+  $('#sources').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    prefs.src = b.dataset.src; savePrefs(); if (data) render();
+  });
+  $('#brandChips').addEventListener('click', (e) => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    view.brand = b.dataset.brand; view.shown = PAGE_SIZE; render();
+  });
+  $('#q').addEventListener('input', (e) => { view.q = e.target.value; view.shown = PAGE_SIZE; if (data) renderTable(modelRows(), modelRows().reduce((a, r) => a + r.value, 0)); });
+  document.querySelector('thead').addEventListener('click', (e) => {
+    const th = e.target.closest('th.sortable'); if (!th) return;
+    const k = th.dataset.sort;
+    if (view.sort === k) view.dir = -view.dir; else { view.sort = k; view.dir = (k === 'model' || k === 'brand') ? 1 : -1; }
+    render();
+  });
+  $('#more').addEventListener('click', (e) => {
+    if (e.target.id !== 'showMore') return;
+    view.shown += PAGE_SIZE; render();
+  });
+
+  $('#csv').addEventListener('click', () => {
+    if (!data) return;
+    const rows = modelRows();
+    const total = rows.reduce((a, r) => a + r.value, 0);
+    const list = filteredRows(rows);
+    const q = (s) => /[",\n;]/.test(s) ? `"${String(s).replace(/"/g, '""')}"` : s;
+    const lines = ['Hãng,Dòng máy,Bình luận,Bài viết,Số lượng,Tỷ lệ %']
+      .concat(list.map((r) => [q(r.brand), q(r.model), r.comment_mentions, r.post_mentions, r.value, (r.value / total * 100).toFixed(2)].join(',')));
+    const { from, to } = currentRange();
+    const name = `dong-may${prefs.page ? '-' + prefs.page : ''}${from ? `-${from}_${to}` : ''}.csv`.replace(/[^\w.\-]+/g, '-');
+    const blob = new Blob(['﻿' + lines.join('\n') + '\n'], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+
+  // Tooltip cho thanh hãng
+  const tip = $('#tip');
+  $('#brands').addEventListener('mousemove', (e) => {
+    const t = e.target.closest('.track');
+    if (!t) { tip.style.display = 'none'; return; }
+    const [brand, v, c, p, m, pct] = t.dataset.tip.split('|');
+    tip.innerHTML = `<b>${brand}</b><br>${fmt.format(v)} lượt · ${fmtPct(Number(pct))}<br>💬 ${fmt.format(c)} bình luận · 📝 ${fmt.format(p)} bài<br>${m} dòng máy`;
+    tip.style.display = 'block';
+    const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8);
+    const y = Math.min(e.clientY + 14, innerHeight - tip.offsetHeight - 8);
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  $('#brands').addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+
+  // ---------- Dữ liệu mẫu (?demo) ----------
+  function demoData(from, to, page) {
+    const models = [
+      ['Apple', 'iPhone 15 Pro Max', 41, 9], ['Apple', 'iPhone 16 Pro Max', 37, 12], ['Apple', 'iPhone 13', 24, 4],
+      ['Apple', 'iPhone 14 Pro Max', 22, 6], ['Apple', 'iPhone 11', 19, 3], ['Apple', 'iPhone 12 Pro Max', 12, 2],
+      ['Apple', 'iPhone 15', 11, 3], ['Apple', 'iPhone XS Max', 6, 0], ['Apple', 'iPhone 7 Plus', 4, 1],
+      ['Samsung', 'Galaxy S24 Ultra', 14, 5], ['Samsung', 'Galaxy A54', 8, 1], ['Samsung', 'Galaxy S23 Ultra', 7, 2],
+      ['Samsung', 'Galaxy Z Flip5', 3, 2], ['OPPO', 'OPPO Reno11', 6, 3], ['OPPO', 'OPPO A57', 4, 0],
+      ['Xiaomi', 'Redmi Note 13 Pro', 7, 2], ['Xiaomi', 'Redmi 13C', 3, 0], ['vivo', 'vivo Y17s', 3, 1],
+      ['realme', 'realme C55', 2, 0], ['Huawei', 'Huawei P30 Pro', 1, 0], ['Google', 'Pixel 8 Pro', 1, 0],
+      ['Chưa rõ hãng', 'Dòng A15 (Samsung/OPPO?)', 3, 0],
+    ];
+    const days = from && to ? (new Date(to) - new Date(from)) / 864e5 + 1 : 365;
+    const f = Math.min(1, days / 90) * (page ? 0.45 : 1);
+    const scale = (n) => Math.round(n * f * 3);
+    const rows = models.map(([brand, model, c, p]) => {
+      const cm = scale(c), pm = scale(p);
+      return { brand, model, comment_mentions: cm, post_mentions: pm, total: cm + pm };
+    }).filter((r) => r.total > 0).sort((a, b) => b.total - a.total);
+    return {
+      models: rows,
+      scope: { posts: Math.round(180 * f), comments: Math.round(2600 * f), pages: page ? 1 : 4 },
+      pages: ['Ốp In Theo Yêu Cầu ABC', 'Case Xinh Store', 'In Ốp Giá Rẻ 24h', 'Ốp Lưng Custom HN'],
+      last_crawl: new Date(Date.now() - 3 * 3600e3).toISOString(),
+    };
+  }
+
+  // ---------- Khởi động ----------
+  function start() {
+    $('#app').hidden = false;
+    $('#from').value = prefs.from; $('#to').value = prefs.to;
+    load();
+  }
+  // Dán link có #key=… vào tab đang mở trang này: trình duyệt không tải lại → tự tải lại
+  addEventListener('hashchange', () => { if (/key=/.test(location.hash)) location.reload(); });
+  if (demo) { $('#demoNote').hidden = false; start(); }
+  else {
+    initKey();
+    if (key) start(); else showLogin();
+  }
+})();
+</script>
+</body>
+</html>

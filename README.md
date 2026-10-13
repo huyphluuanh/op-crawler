@@ -15,6 +15,18 @@ lưu vào Supabase, rồi báo cáo dòng máy nào được khách chọn nhi�
 | `/kiemtra noidung:<chữ>` | Thử nhận diện dòng máy trong một đoạn chữ (miễn phí, không gọi Apify) |
 | `/lichsu` | 10 lần crawl gần nhất và trạng thái |
 
+## Web báo cáo
+
+Link nằm trong `report-link.txt` (tạo bởi `CAI-DAT.cmd`), dạng `https://huyphluuanh.github.io/op-crawler/#key=…`.
+Mở một lần là trình duyệt nhớ khóa; lần sau chỉ cần `https://huyphluuanh.github.io/op-crawler/`.
+Xem thử với dữ liệu mẫu: thêm `?demo` vào link.
+
+- Lọc thời gian (7 / 30 / 90 ngày, tất cả, tùy chọn từ–đến), fanpage, nguồn (bình luận / bài viết)
+- Tỷ lệ + số lượng theo hãng; bảng chi tiết từng dòng máy (tìm, lọc hãng, sắp xếp, tải CSV)
+- Web tĩnh ở `web/index.html`, tự đăng lên GitHub Pages khi push (`.github/workflows/pages.yml`);
+  dữ liệu lấy từ Edge Function `report-api` (cần khóa `REPORT_KEY`). Repo phải Public để dùng Pages miễn phí —
+  code không chứa token, dữ liệu vẫn chỉ đọc được khi có khóa.
+
 Đọc báo cáo: **💬 bình luận** = khách hỏi/đặt (nhu cầu thật), **📝 bài viết** = shop đăng mẫu (cái đối thủ đẩy).
 Mỗi bài/bình luận tính tối đa 1 lần cho mỗi dòng máy.
 

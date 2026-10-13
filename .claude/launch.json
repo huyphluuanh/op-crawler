@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "op-report",
+      "runtimeExecutable": "npx.cmd",
+      "runtimeArgs": ["vite", "web", "--port", "5174", "--strictPort"],
+      "port": 5174
+    }
+  ]
+}
+

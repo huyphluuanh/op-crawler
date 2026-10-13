@@ -6,3 +6,4 @@ supabase/.branches/
 supabase/.secrets.tmp.env
 .env
 *.log
+report-link.txt

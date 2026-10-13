@@ -9,23 +9,21 @@ set AI_AGENT=
 set NO_COLOR=
 for /f "delims==" %%v in ('set CLAUDE 2^>nul') do set %%v=
 
-echo === 1/3 Cai thu vien ===
+echo === 1/2 Cai thu vien ===
 call npm.cmd install --no-audit --no-fund
 if errorlevel 1 goto fail
 
 echo.
-echo === 2/3 Database + Edge Functions + Discord ===
+echo === 2/2 Database + Edge Functions + Discord + GitHub + web bao cao ===
 call npm.cmd run setup
 if errorlevel 1 goto fail
 
 echo.
-echo === 3/3 Day code len GitHub ===
-git push -u origin main
-if errorlevel 1 echo (Chua day duoc code len GitHub - kiem tra repo github.com/huyphluuanh/op-crawler da tao chua. Bot van chay binh thuong.)
-
-echo.
-echo XONG! Mo link trong file invite-link.txt de moi bot vao server Discord.
+echo XONG! Notepad se mo 2 file:
+echo   invite-link.txt  = link moi bot vao server Discord
+echo   report-link.txt  = link web xem bao cao (luu lai / ghim len trinh duyet)
 start "" notepad invite-link.txt
+start "" notepad report-link.txt
 pause
 exit /b 0
 

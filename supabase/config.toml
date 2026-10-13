@@ -420,3 +420,6 @@ verify_jwt = false
 
 [functions.apify-webhook]
 verify_jwt = false
+
+[functions.report-api]
+verify_jwt = false
