@@ -15,6 +15,15 @@ export const COMMANDS = [
     ],
   },
   {
+    name: 'binhluan',
+    type: 1,
+    description: 'Chỉ lấy bình luận của các bài viết bạn dán link (không lấy cả fanpage)',
+    options: [
+      { type: 3, name: 'link', description: 'Link bài viết (dán nhiều link cách nhau dấu cách)', required: true },
+      { type: 4, name: 'so_luong', description: 'Số bình luận tối đa mỗi bài (mặc định 100)', min_value: 1, max_value: 5000 },
+    ],
+  },
+  {
     name: 'baocao',
     type: 1,
     description: 'Báo cáo dòng máy khách hay chọn in ốp',
@@ -36,3 +45,4 @@ export const COMMANDS = [
 
 export const DEFAULT_POSTS = 20;
 export const DEFAULT_COMMENTS = 30;
+export const DEFAULT_COMMENTS_ONLY = 100;

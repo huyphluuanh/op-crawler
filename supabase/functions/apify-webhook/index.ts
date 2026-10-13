@@ -5,7 +5,9 @@
 import { COMMENTS_ACTOR, datasetItems, startActor, webhookUrl } from '../_shared/apify.ts';
 import { background, db, type Job, upsertChunks } from '../_shared/db.ts';
 import { COLOR, notifyJob } from '../_shared/discord.ts';
-import { isErrorItem, mapComment, mapPost, mentionsFor, type MentionRow, type PostRow } from '../_shared/ingest.ts';
+import {
+  findPostFor, isErrorItem, mapComment, mapPost, mentionsFor, type MentionRow, type PostRow, stubPostFromUrl,
+} from '../_shared/ingest.ts';
 import { formatReport, type ModelRow, toCsv } from '../_shared/report.ts';
 
 Deno.serve(async (req) => {
@@ -90,12 +92,34 @@ async function onComments(job: Job, run: Run) {
   const items = await datasetItems(run.defaultDatasetId);
   const { data: posts } = await db.from('posts').select('post_key, url, page_name, page_url').eq('job_id', job.id);
   const postList = (posts ?? []) as Pick<PostRow, 'post_key' | 'url' | 'page_name' | 'page_url'>[];
+
+  // Lệnh /binhluan không chạy bước lấy bài → tạo bài "tạm" từ link đã dán (caption = postTitle)
+  const stubs: PostRow[] = [];
+  const commentsOnly = job.posts_limit === 0;
+  for (const it of commentsOnly ? items : []) {
+    if (isErrorItem(it) || findPostFor(it, [...postList, ...stubs])) continue;
+    const url = typeof it.inputUrl === 'string' ? it.inputUrl : typeof it.facebookUrl === 'string' ? it.facebookUrl : null;
+    if (url) stubs.push(stubPostFromUrl(url, job.id, typeof it.postTitle === 'string' ? it.postTitle : null));
+  }
+  if (stubs.length) {
+    await upsertChunks('posts', stubs, 'post_key');
+    await saveMentions(stubs.flatMap((p) =>
+      mentionsFor('post', p.post_key, p.text, {
+        post_key: p.post_key, page_name: p.page_name, page_url: p.page_url, at: null, job_id: job.id,
+      })
+    ));
+    postList.push(...stubs);
+  }
   const byKey = new Map(postList.map((p) => [p.post_key, p]));
 
   const comments = dedupe(
     items.map((it) => mapComment(it, job.id, postList)).filter((c) => !!c),
     (c) => c!.comment_key,
   ).map((c) => c!);
+  if (!comments.length && items.some(isErrorItem)) {
+    const e = items.find(isErrorItem)!;
+    throw new Error(`Không lấy được bình luận (bài riêng tư, link sai, hoặc Facebook chặn).\nApify báo: ${e.error ?? e.errorDescription}`);
+  }
   await upsertChunks('comments', comments, 'comment_key');
 
   const mentions = comments.flatMap((c) => {
@@ -105,7 +129,7 @@ async function onComments(job: Job, run: Run) {
     });
   });
   await saveMentions(mentions);
-  await finish({ ...job, comment_count: comments.length });
+  await finish({ ...job, post_count: job.post_count + stubs.length, comment_count: comments.length });
 }
 
 async function saveMentions(rows: MentionRow[]) {

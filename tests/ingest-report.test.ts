@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { findFacebookUrls, findPostFor, mapComment, mapPost, mentionsFor } from '../supabase/functions/_shared/ingest.ts';
+import {
+  findFacebookUrls, findPostFor, isPostUrl, mapComment, mapPost, mentionsFor, stubPostFromUrl,
+} from '../supabase/functions/_shared/ingest.ts';
 import { brandShare, formatReport, toCsv } from '../supabase/functions/_shared/report.ts';
 
 const postItem = {
@@ -58,6 +60,39 @@ describe('findFacebookUrls', () => {
     expect(findFacebookUrls('xem https://www.facebook.com/abc, và https://fb.com/xyz/posts/1. https://google.com')).toEqual([
       'https://www.facebook.com/abc', 'https://fb.com/xyz/posts/1',
     ]);
+  });
+});
+
+describe('isPostUrl / stubPostFromUrl', () => {
+  it.each([
+    ['https://www.facebook.com/opinhinh/posts/pfbid02tC', true],
+    ['https://www.facebook.com/permalink.php?story_fbid=123&id=456', true],
+    ['https://www.facebook.com/share/p/1AbCdE/', true],
+    ['https://www.facebook.com/opinhinh/videos/123456/', true],
+    ['https://www.facebook.com/reel/123456', true],
+    ['https://www.facebook.com/photo/?fbid=123', true],
+    ['https://www.facebook.com/watch?v=123', true],
+    ['https://fb.watch/abc/', true],
+    ['https://www.facebook.com/opinhinh', false],
+    ['https://www.facebook.com/profile.php?id=1000', false],
+  ])('%s → %s', (u, expected) => {
+    expect(isPostUrl(u)).toBe(expected);
+  });
+
+  it('bài tạm đoán tên fanpage từ link', () => {
+    const p = stubPostFromUrl('https://m.facebook.com/opinhinh/posts/pfbid02tC/?ref=share', 3, 'Mẫu ip 16');
+    expect(p).toMatchObject({
+      post_key: 'url:facebook.com/opinhinh/posts/pfbid02tc',
+      page_name: 'opinhinh',
+      page_url: 'https://www.facebook.com/opinhinh',
+      text: 'Mẫu ip 16',
+    });
+    expect(stubPostFromUrl('https://www.facebook.com/share/p/1AbC/', 3, null).page_name).toBeNull();
+  });
+
+  it('bình luận gắn được vào bài tạm', () => {
+    const p = stubPostFromUrl('https://www.facebook.com/opinhinh/posts/pfbid02tC', 3, null);
+    expect(findPostFor({ inputUrl: 'https://www.facebook.com/opinhinh/posts/pfbid02tC' }, [p])).toBe(p.post_key);
   });
 });
 

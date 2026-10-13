@@ -1,10 +1,10 @@
 // Discord Interactions endpoint: nhận lệnh /crawl, /baocao, /kiemtra, /lichsu và "Crawl link này".
 // Discord bắt trả lời trong 3 giây → trả "đang xử lý" (deferred) rồi làm tiếp ở nền.
-import { DEFAULT_COMMENTS, DEFAULT_POSTS, MESSAGE_COMMAND } from '../_shared/commands.ts';
+import { DEFAULT_COMMENTS, DEFAULT_COMMENTS_ONLY, DEFAULT_POSTS, MESSAGE_COMMAND } from '../_shared/commands.ts';
 import { COLOR, editOriginal, type MessageBody, verifySignature } from '../_shared/discord.ts';
 import { background, db, type Job } from '../_shared/db.ts';
-import { estimateCost, POSTS_ACTOR, startActor, webhookUrl } from '../_shared/apify.ts';
-import { findFacebookUrls } from '../_shared/ingest.ts';
+import { COMMENTS_ACTOR, estimateCost, POSTS_ACTOR, startActor, webhookUrl } from '../_shared/apify.ts';
+import { findFacebookUrls, isPostUrl } from '../_shared/ingest.ts';
 import { extractPhoneModels } from '../_shared/phone-models.ts';
 import { formatReport, type ModelRow, type Scope, toCsv } from '../_shared/report.ts';
 
@@ -48,6 +48,7 @@ Deno.serve(async (req) => {
     const handlers: Record<string, (i: Interaction) => Promise<MessageBody | [MessageBody, string]>> = {
       crawl: handleCrawl,
       [MESSAGE_COMMAND]: handleCrawl,
+      binhluan: handleCommentsOnly,
       baocao: handleReport,
       lichsu: handleHistory,
     };
@@ -130,6 +131,63 @@ async function handleCrawl(i: Interaction): Promise<MessageBody> {
         `\n\nTối đa **${postsLimit}** bài/fanpage, **${commentsPerPost}** bình luận/bài.` +
         `\nChi phí Apify ước tính tối đa ~$${cost.toFixed(2)}.` +
         `\nThường mất 1–10 phút. Xong bot sẽ báo kết quả ở đây.`,
+    }],
+  };
+}
+
+// ---------------- /binhluan ----------------
+async function handleCommentsOnly(i: Interaction): Promise<MessageBody> {
+  const all = findFacebookUrls(option<string>(i, 'link') ?? '').slice(0, 50);
+  const urls = all.filter(isPostUrl);
+  const skipped = all.filter((u) => !isPostUrl(u));
+  if (!urls.length) {
+    return {
+      embeds: [{
+        color: COLOR.warn,
+        title: 'Không thấy link bài viết',
+        description: (skipped.length ? `Đây là link fanpage, không phải link bài:\n${skipped.map((u) => `• ${u}`).join('\n')}\n\n` : '') +
+          'Lấy link bài: trên Facebook bấm vào **giờ đăng** của bài (vd "3 giờ", "12 tháng 10") rồi copy địa chỉ trên trình duyệt, ' +
+          'hoặc bấm **Chia sẻ → Sao chép liên kết**. Muốn lấy cả fanpage thì dùng `/crawl`.',
+      }],
+    };
+  }
+  const perPost = option<number>(i, 'so_luong') ?? DEFAULT_COMMENTS_ONLY;
+  const user = i.member?.user ?? i.user;
+
+  const { data: job, error } = await db.from('jobs').insert({
+    input_urls: urls,
+    posts_limit: 0, // 0 = chế độ chỉ lấy bình luận
+    comments_per_post: perPost,
+    status: 'crawling_comments',
+    discord_app_id: i.application_id,
+    discord_token: i.token,
+    discord_channel_id: i.channel_id ?? i.channel?.id ?? null,
+    discord_user: user?.id ?? null,
+  }).select().single<Job>();
+  if (error) throw new Error(`Không tạo được job: ${error.message}`);
+
+  try {
+    const runId = await startActor(COMMENTS_ACTOR, {
+      startUrls: urls.map((url) => ({ url })),
+      resultsLimit: perPost,
+      includeNestedComments: false,
+      viewOption: 'RANKED_UNFILTERED',
+    }, webhookUrl(job.id, 'comments'));
+    await db.from('jobs').update({ apify_comments_run: runId }).eq('id', job.id);
+  } catch (e) {
+    await db.from('jobs').update({ status: 'failed', error: String(e), finished_at: new Date().toISOString() }).eq('id', job.id);
+    throw e;
+  }
+
+  return {
+    embeds: [{
+      color: COLOR.info,
+      title: `⏳ Đang lấy bình luận (job #${job.id})`,
+      description:
+        urls.map((u) => `• ${u}`).join('\n') +
+        (skipped.length ? `\n\nBỏ qua (link fanpage, không phải bài): ${skipped.join(' ')}` : '') +
+        `\n\nTối đa **${perPost}** bình luận/bài. Chi phí Apify ước tính tối đa ~$${estimateCost(0, urls.length * perPost).toFixed(2)}.` +
+        `\nThường mất 1–5 phút. Xong bot sẽ báo kết quả ở đây.`,
     }],
   };
 }

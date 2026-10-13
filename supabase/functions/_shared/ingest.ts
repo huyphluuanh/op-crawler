@@ -135,7 +135,36 @@ export function mentionsFor(
   }));
 }
 
-const FB_URL = /https?:\/\/(?:[a-z0-9-]+\.)?(?:facebook\.com|fb\.com|fb\.watch|fb\.me)\/[^\s<>"')\]]+/gi;
+/** Link trỏ tới một bài cụ thể (bài, ảnh, video, reel, link chia sẻ) chứ không phải trang fanpage. */
+export function isPostUrl(u: string): boolean {
+  return /\/(posts|permalink|videos|reel|reels|photos?|watch|story\.php|permalink\.php|photo\.php)\b|\/share\/[prv]\/|[?&](story_fbid|fbid|v)=|fb\.watch\//i
+    .test(u);
+}
+
+const NOT_PAGE = new Set(['permalink.php', 'story.php', 'photo.php', 'photo', 'share', 'watch', 'reel', 'groups', 'profile.php']);
+
+/**
+ * Bài viết "tạm" khi chỉ lấy bình luận (không chạy actor lấy bài): khóa theo URL,
+ * caption lấy từ postTitle của bình luận, tên fanpage đoán từ đoạn đầu đường dẫn.
+ */
+export function stubPostFromUrl(url: string, jobId: number, caption: string | null): PostRow {
+  const seg = urlKey(url).split('/')[1] ?? '';
+  const page = seg && !NOT_PAGE.has(seg) ? seg : null;
+  return {
+    post_key: `url:${urlKey(url)}`,
+    url,
+    page_url: page ? `https://www.facebook.com/${page}` : null,
+    page_name: page,
+    text: caption,
+    posted_at: null,
+    likes: null,
+    comments: null,
+    shares: null,
+    job_id: jobId,
+  };
+}
+
+const FB_URL =/https?:\/\/(?:[a-z0-9-]+\.)?(?:facebook\.com|fb\.com|fb\.watch|fb\.me)\/[^\s<>"')\]]+/gi;
 
 /** Lấy các link Facebook trong một đoạn chữ (người dùng có thể dán nhiều link một lúc). */
 export function findFacebookUrls(text: string): string[] {
