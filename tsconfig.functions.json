@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": [],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "paths": {
+      "npm:@supabase/supabase-js@2": ["./node_modules/@supabase/supabase-js"],
+      "npm:tweetnacl@1.0.3": ["./node_modules/tweetnacl"]
+    }
+  },
+  "include": ["types", "supabase/functions"]
+}

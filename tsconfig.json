@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["supabase/functions/_shared/phone-models.ts", "supabase/functions/_shared/report.ts", "supabase/functions/_shared/ingest.ts", "supabase/functions/_shared/commands.ts", "tests", "scripts"]
+}
+

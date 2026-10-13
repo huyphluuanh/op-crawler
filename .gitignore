@@ -1,0 +1,8 @@
+node_modules/
+secrets.local.env
+invite-link.txt
+supabase/.temp/
+supabase/.branches/
+supabase/.secrets.tmp.env
+.env
+*.log

@@ -1,0 +1,21 @@
+{
+  "name": "op-crawler",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Discord bot crawl fanpage Facebook (qua Apify), trích dòng điện thoại khách chọn in ốp, lưu Supabase",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.functions.json",
+    "test": "vitest run",
+    "setup": "node scripts/setup.ts",
+    "deploy": "supabase functions deploy discord apify-webhook --project-ref xphjrfuogetlvgxvclzp --no-verify-jwt --use-api"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.117.3",
+    "@types/node": "^24.19.2",
+    "supabase": "^2.120.0",
+    "tweetnacl": "^1.0.3",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}
