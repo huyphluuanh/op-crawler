@@ -1,6 +1,6 @@
 // Discord Interactions endpoint: nhận lệnh /crawl, /baocao, /kiemtra, /lichsu và "Crawl link này".
 // Discord bắt trả lời trong 3 giây → trả "đang xử lý" (deferred) rồi làm tiếp ở nền.
-import { DEFAULT_COMMENTS, DEFAULT_COMMENTS_ONLY, DEFAULT_POSTS, MESSAGE_COMMAND } from '../_shared/commands.ts';
+import { DEFAULT_COMMENTS, DEFAULT_COMMENTS_ONLY, DEFAULT_POSTS, MESSAGE_COMMAND, sinceDate } from '../_shared/commands.ts';
 import { COLOR, editOriginal, type MessageBody, verifySignature } from '../_shared/discord.ts';
 import { background, db, type Job } from '../_shared/db.ts';
 import { COMMENTS_ACTOR, estimateCost, POSTS_ACTOR, startActor, webhookUrl } from '../_shared/apify.ts';
@@ -94,6 +94,7 @@ async function handleCrawl(i: Interaction): Promise<MessageBody> {
   }
   const postsLimit = option<number>(i, 'so_bai') ?? DEFAULT_POSTS;
   const commentsPerPost = option<number>(i, 'binh_luan') ?? DEFAULT_COMMENTS;
+  const days = option<number>(i, 'so_ngay');
   const user = i.member?.user ?? i.user;
 
   const { data: job, error } = await db.from('jobs').insert({
@@ -113,6 +114,7 @@ async function handleCrawl(i: Interaction): Promise<MessageBody> {
       startUrls: urls.map((url) => ({ url })),
       resultsLimit: postsLimit,
       captionText: false,
+      ...(days ? { onlyPostsNewerThan: sinceDate(days) } : {}),
     }, webhookUrl(job.id, 'posts'));
     await db.from('jobs').update({ apify_posts_run: runId }).eq('id', job.id);
   } catch (e) {
@@ -128,7 +130,10 @@ async function handleCrawl(i: Interaction): Promise<MessageBody> {
       title: `⏳ Đang crawl (job #${job.id})`,
       description:
         urls.map((u) => `• ${u}`).join('\n') +
-        `\n\nTối đa **${postsLimit}** bài/fanpage, **${commentsPerPost}** bình luận/bài.` +
+        `\n\nTối đa **${postsLimit}** bài/fanpage` +
+        (days ? ` đăng trong **${days} ngày** gần nhất (từ ${sinceDate(days)})` : '') +
+        `, **${commentsPerPost}** bình luận/bài.` +
+        (days ? `\nMuốn lấy hết bài trong ${days} ngày mà fanpage đăng nhiều thì tăng \`so_bai\`.` : '') +
         `\nChi phí Apify ước tính tối đa ~$${cost.toFixed(2)}.` +
         `\nThường mất 1–10 phút. Xong bot sẽ báo kết quả ở đây.`,
     }],
@@ -152,6 +157,7 @@ async function handleCommentsOnly(i: Interaction): Promise<MessageBody> {
     };
   }
   const perPost = option<number>(i, 'so_luong') ?? DEFAULT_COMMENTS_ONLY;
+  const days = option<number>(i, 'so_ngay');
   const user = i.member?.user ?? i.user;
 
   const { data: job, error } = await db.from('jobs').insert({
@@ -171,7 +177,9 @@ async function handleCommentsOnly(i: Interaction): Promise<MessageBody> {
       startUrls: urls.map((url) => ({ url })),
       resultsLimit: perPost,
       includeNestedComments: false,
-      viewOption: 'RANKED_UNFILTERED',
+      // Lọc theo ngày cần sắp xếp mới nhất trước
+      viewOption: days ? 'RECENT_ACTIVITY' : 'RANKED_UNFILTERED',
+      ...(days ? { onlyCommentsNewerThan: sinceDate(days) } : {}),
     }, webhookUrl(job.id, 'comments'));
     await db.from('jobs').update({ apify_comments_run: runId }).eq('id', job.id);
   } catch (e) {
@@ -186,7 +194,9 @@ async function handleCommentsOnly(i: Interaction): Promise<MessageBody> {
       description:
         urls.map((u) => `• ${u}`).join('\n') +
         (skipped.length ? `\n\nBỏ qua (link fanpage, không phải bài): ${skipped.join(' ')}` : '') +
-        `\n\nTối đa **${perPost}** bình luận/bài. Chi phí Apify ước tính tối đa ~$${estimateCost(0, urls.length * perPost).toFixed(2)}.` +
+        `\n\nTối đa **${perPost}** bình luận/bài` +
+        (days ? ` viết trong **${days} ngày** gần nhất (từ ${sinceDate(days)})` : '') +
+        `. Chi phí Apify ước tính tối đa ~$${estimateCost(0, urls.length * perPost).toFixed(2)}.` +
         `\nThường mất 1–5 phút. Xong bot sẽ báo kết quả ở đây.`,
     }],
   };

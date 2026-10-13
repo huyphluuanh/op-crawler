@@ -12,6 +12,7 @@ export const COMMANDS = [
       { type: 3, name: 'link', description: 'Link bài viết hoặc fanpage (dán nhiều link cách nhau dấu cách)', required: true },
       { type: 4, name: 'so_bai', description: 'Số bài mới nhất lấy từ mỗi fanpage (mặc định 20)', min_value: 1, max_value: 200 },
       { type: 4, name: 'binh_luan', description: 'Số bình luận lấy mỗi bài (mặc định 30, 0 = không lấy)', min_value: 0, max_value: 500 },
+      { type: 4, name: 'so_ngay', description: 'Chỉ lấy bài đăng trong N ngày gần nhất (vd 7, 30)', min_value: 1, max_value: 3650 },
     ],
   },
   {
@@ -21,6 +22,7 @@ export const COMMANDS = [
     options: [
       { type: 3, name: 'link', description: 'Link bài viết (dán nhiều link cách nhau dấu cách)', required: true },
       { type: 4, name: 'so_luong', description: 'Số bình luận tối đa mỗi bài (mặc định 100)', min_value: 1, max_value: 5000 },
+      { type: 4, name: 'so_ngay', description: 'Chỉ lấy bình luận viết trong N ngày gần nhất (vd 7, 30)', min_value: 1, max_value: 3650 },
     ],
   },
   {
@@ -46,3 +48,8 @@ export const COMMANDS = [
 export const DEFAULT_POSTS = 20;
 export const DEFAULT_COMMENTS = 30;
 export const DEFAULT_COMMENTS_ONLY = 100;
+
+/** Ngày bắt đầu (YYYY-MM-DD, giờ UTC) cho bộ lọc "N ngày gần nhất" của Apify. */
+export function sinceDate(days: number, now = new Date()): string {
+  return new Date(now.getTime() - days * 86_400_000).toISOString().slice(0, 10);
+}
